@@ -5,10 +5,10 @@ This repository houses the necessary code to perform advanced environmental moni
 Parameter                               | Symbol | Unit
 ----------------------------------------|--------|--------------
 Air temperature                         | $T_a$  | $C$
-Relative air humimidity                 | $RH_a$ | $\%$
+Relative air humimidity                 | $RH_a$ | $\\%$
 Carbon dioxide ($CO_ 2$) content        | $pCO2$ | $\text{ppm}$
 Other volatile organic compound content | $pVOC$ | $\text{ppm}$
-Soil humidity                           | $RH_s$ | $\%$
+Soil humidity                           | $RH_s$ | $\\%$
 Soil temperature                        | $T_s$  | $C$
 
 Based on the above sensor readings, the following **actuations** will occur:

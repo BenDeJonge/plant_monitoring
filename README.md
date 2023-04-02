@@ -8,8 +8,9 @@ Air temperature                         | $T_a$  | $C$
 Relative air humimidity                 | $RH_a$ | $\\%$
 Carbon dioxide ($CO_ 2$) content        | $pCO2$ | $\text{ppm}$
 Other volatile organic compound content | $pVOC$ | $\text{ppm}$
-Soil humidity                           | $RH_s$ | $\\%$
 Soil temperature                        | $T_s$  | $C$
+Soil humidity                           | $RH_s$ | $\\%$
+
 
 Based on the above sensor readings, the following **actuations** will occur:
 

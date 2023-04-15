@@ -1,6 +1,6 @@
 # plant_monitoring
 
-This repository houses the necessary code to perform advanced environmental monitoring and associated actuation for *sensitive house plants*, typically from Caribbean origin. The following **parameters** will be tracked:
+This repository houses the necessary code to perform advanced environmental monitoring and associated actuation for sensitive plants. The following **parameters** will be tracked:
 
 Parameter                               | Symbol | Unit
 ----------------------------------------|--------|--------------

@@ -1,0 +1,13 @@
+Boards
+https://medium.com/@tybstar/cheap-arduino-clones-with-esp8266-wifi-fd3b3f1e504a
+https://blog.devgenius.io/programming-arduino-uno-clone-with-built-in-wifi-module-uno-r3-wifi-atmega328p-esp8266-9494d9a90cfa
+https://cgrant.medium.com/using-the-esp8266-wifi-module-with-arduino-uno-publishing-to-thingspeak-99fc77122e82
+https://www.instructables.com/How-to-fix-bad-Chinese-Arduino-clones/
+
+
+Rust
+https://dev.to/creativcoder/how-to-run-rust-on-arduino-uno-40c0
+https://mabez.dev/blog/posts/esp-rust-ecosystem/
+
+Interfacing ATMega16 and ESP8266
+https://circuitdigest.com/microcontroller-projects/esp8266-nodemcu-with-atmega16-avr-microcontroller-to-send-an-email

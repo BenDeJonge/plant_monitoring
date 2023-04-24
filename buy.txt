@@ -1,0 +1,24 @@
+GENERAL
+- resistors
+- shrink wrap
+- jst 1.25 mm 4 pin connectors (fine without, LCD soldered for now)
+- 5m 4-pin LED wire WS2812B ALTERNATIVELY 280m 30 AWG wire colorful
+- proto pcb
+- Lithium battery CR1225
+
+SENSORS
+- pH meter
+- real time clock DS1307
+- temperatuur (aht20) and co2 (ens160) sensor separate? Only possible to make 1 i2c interface as registers cannot be rewritten
+			Err T [K]	Err RH [%]	Additional
+	DHT11	2.0			5.0			/
+	DHT22	0.5			2.0			/
+	AHT10	0.3			2.0			/
+	AHT20	1.0			3.0			/
+	BME280	1.0			3.0			Pressure
+	BME680	1.0			3.0			Pressure, air quality
+	
+	ALTERNATIVELY: get I2C multiplexer TCA9548 
+	
+ACTUATORS
+- water pump

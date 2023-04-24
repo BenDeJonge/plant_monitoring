@@ -1,6 +1,6 @@
 # plant_monitoring
 
-This repository houses the necessary code to perform advanced environmental monitoring and associated actuation for *sensitive house plants*, typically from Caribbean origin. The following **parameters** will be tracked:
+This repository houses the necessary code to perform advanced environmental monitoring and associated actuation for sensitive plants. The following **parameters** will be tracked:
 
 Parameter                               | Symbol | Unit
 ----------------------------------------|--------|--------------
@@ -27,7 +27,7 @@ $RH_s$    | Low   | Watering of the plant
 ### Part list
 
 1. Boards
-    1. Arduino Uno Rev.3 (ATmega328P) with built-in WiFi module (ESP8266) 
+    1. Arduino Uno Rev.3 (ATmega328P) with built-in WiFi module (ESP8266) and power supply
 2. Connections
     1. Breadboard 400 tie-point
     2. Three-pin cable coil ($10 m$)
@@ -43,7 +43,8 @@ $RH_s$    | Low   | Watering of the plant
     3. Submersible water pump $5 V$ JT-SL 80
 5. Data visualization
     1. LCD with I2C interface (4 x 20 characters)
-    2. Free Wix webserver (up to $500 MB$)
+    2. LED for each sensor and actuator
+    3. Free Wix webserver (up to $500 MB$)
 
 ### Wiring diagram
 

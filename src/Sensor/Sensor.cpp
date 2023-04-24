@@ -1,3 +1,5 @@
+#include "Sensor.h"
+
 bool toggleForTime(int pin, unsigned long startTime, int duration, int defaultState) {
     // Toggle a pin ON/OFF for a given amount of time based on its default state (0: OFF, 1: ON).
     if (defaultState == 0) {
@@ -5,7 +7,7 @@ bool toggleForTime(int pin, unsigned long startTime, int duration, int defaultSt
     } else {
         digitalWrite(pin, LOW);
     }
-    if millis() -  startTime >= duration {
+    if (millis() -  startTime >= duration) {
         if (defaultState == 0) {
                 digitalWrite(pin, LOW);
             } else {
@@ -14,7 +16,7 @@ bool toggleForTime(int pin, unsigned long startTime, int duration, int defaultSt
         // The actuator is no longer active.
         return false;
     }
-    // The actuator is still active.
+    // The actuator remains active.
     return true;
     }
 

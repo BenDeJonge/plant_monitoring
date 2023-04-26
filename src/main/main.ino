@@ -116,7 +116,7 @@ void setup() {
     myDurations.soilMeasurementLength = 10000;
     myDurations.cycles = 25;
     myDurations.watering = 15000;
-    myDurations.lcdSensors = 3000;
+    myDurations.lcdSensors = 1000;
     myDurations.lcdLamp = 300;
 
     // Toggles
@@ -279,7 +279,11 @@ void writeLcdSensors(float soilMoistureMean, float soilPh,
     // AIR PARAMETERS
     lcd.setCursor(4, 1);
     lcd.print(airMoisture, 1);
-    lcd.setCursor(11, 1);
+    if (airTemp < 0) {
+        lcd.setCursor(10, 1);
+    } else {
+        lcd.setCursor(11, 1);
+    }
     lcd.print(airTemp, 2);
 
     // GAS PARAMETERS

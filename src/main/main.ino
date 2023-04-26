@@ -4,10 +4,13 @@
 //------------------------------------------------------------------------------
 
 #include <DFRobot_ENS160.h>
+#include <AHT20.h>
 #include <Sensor.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+DFRobot_ENS160_I2C ENS160(&Wire, /*I2CAddr*/ 0x53);
+AHT20 AHT20;
 
 //------------------------------------------------------------------------------
 // G L O B A L S
@@ -29,32 +32,47 @@ const int pinInputLight = A1;
 
 // Timings
 const int baudrate = 19200;
-const unsigned long durationMeasurement = 10000;  // 10 s
-// const unsigned long uploadTime = 3600000; // 1 hour
-const unsigned long intervalLcd = 500;
-const unsigned long intervalMeasurement = 60000;  // 2 mins
 
 // Chronos
-unsigned long previousTimeMeasurement, previousTimeLcd, previousTimeWatering, previousTime;
-unsigned long cycles;
-const int cycleThreshold = 2500;
 
-// Toggles
-bool firstRun, measuringSoil, watering, wateredThisCycle;
-// bool heating = false;
+struct Chronos {
+    // Watering event
+    unsigned long soilMeasurement;
+    unsigned long watering;
+    unsigned long lcdSensors;
+    // Lamp
+    unsigned long lamp;
+    unsigned long lcdLamp;
+    unsigned long cycles;
+} myChronos;
+
+struct Durations {
+    unsigned long soilMeasurement;
+    unsigned long soilMeasurementLength;
+    unsigned long watering;
+    unsigned long lcdSensors;
+    unsigned long lcdLamp;
+    unsigned long cycles;
+} myDurations;
+
+struct Toggles{
+    bool firstRun;
+    bool soilMeasurement;
+    bool watering;
+    bool wateredThisCycle;     
+} myToggles;
+
+struct Calibrations {
+    float slopeSoilMoisture;
+    float interceptSoilMoisture;
+    float thresholdSoilMoisture;
+} myCalibs;
+
 
 // Sensour readouts
-float soilMoisture;
-float soilMoistureMean;
+float soilMoisture, soilMoistureMean;
 // Data containers
 // Count cycles. Add values. Divide by number of cycles to grab mean.
-
-// Sensor parameters
-const float slopeSoilMoisture = 1.0;
-const float interceptSoilMoisture = 0.0;
-const float thresholdSoilMoisture = 2.0;  // L/kg
-// Actuator settings
-const unsigned long durationWatering = 15000;  // 15 s
 
 
 //------------------------------------------------------------------------------
@@ -68,6 +86,8 @@ void setup() {
         pinMode(pin, OUTPUT);
         digitalWrite(pin, LOW);
     }
+    // Toggle air sensor on.
+    digitalWrite(pinOutputAir, HIGH);
 
     // Setting input pins
     int pinsInput [] = {pinInputSoil, pinInputLight};
@@ -79,22 +99,42 @@ void setup() {
     Serial.begin(baudrate);
     lcd.init();
     lcd.backlight();
-
+    writeLcdStructure();
+    ENS160.setPWRMode(ENS160_STANDARD_MODE);
+    ENS160.setTempAndHum(/*temperature=*/25.0, /*humidity=*/50.0);
+    
     // Chronos
-    previousTimeMeasurement = 0;
-    previousTimeLcd = 0;
-    previousTimeWatering = 0;
-    cycles = 0;
+    myChronos.soilMeasurement = 0;
+    myChronos.watering = 0;
+    myChronos.lcdSensors = 0;
+    myChronos.lamp = 0;
+    myChronos.lcdLamp = 0;
+    myChronos.cycles = 0;
+
+    // Durations
+    myDurations.soilMeasurement = 60000;
+    myDurations.soilMeasurementLength = 10000;
+    myDurations.watering = 15000;
+    myDurations.lcdSensors = 3000;
+    myDurations.lcdLamp = 300;
+    myDurations.cycles = 25;
 
     // Toggles
-    firstRun - true;
-    measuringSoil = true;
-    watering = false;
-    wateredThisCycle = false;
+    myToggles.firstRun = true;
+    myToggles.soilMeasurement = true;
+    myToggles.watering = false;
+    myToggles.wateredThisCycle = false; 
+
+    // Calibrations
+    myCalibs.slopeSoilMoisture = 1.0;
+    myCalibs.interceptSoilMoisture = 0.0;
+    myCalibs.thresholdSoilMoisture = 2.0;
 
     // Sensor readouts
     soilMoisture = 0.0;
     soilMoistureMean = 0.0;
+
+
 }
 
 
@@ -105,41 +145,41 @@ void setup() {
 void loop() {
     
     // Check if it is time to do a measurement yet. Neglect on the first run.
-    if ((millis() - previousTimeMeasurement >= intervalMeasurement) || (firstRun == true)) {
+    if ((millis() - myChronos.soilMeasurement >= myDurations.soilMeasurement) || (myToggles.firstRun == true)) {
         // Serial.print("Starting soil measurement\n");
-        previousTimeMeasurement = millis();
-        firstRun = false;
+        myChronos.soilMeasurement = millis();
+        myToggles.firstRun = false;
         // Resetting the measurement.
-        measuringSoil = true;
+        myToggles.soilMeasurement = true;
         soilMoisture = 0.0;
-        cycles = 0;
+        myChronos.cycles = 0;
         // Resetting the water states.
-        watering = false;
-        wateredThisCycle = false;
+        myToggles.watering = false;
+        myToggles.wateredThisCycle = false;
     }
 
     // Soil moisture measurement
-    if (measuringSoil == true) {
-        measuringSoil = toggleForTime(pinOutputSoil, previousTimeMeasurement, durationMeasurement, 0);
-        cycles++;
+    if (myToggles.soilMeasurement == true) {
+        myToggles.soilMeasurement = toggleForTime(pinOutputSoil, myChronos.soilMeasurement, myDurations.soilMeasurementLength, 0);
+        myChronos.cycles++;
         // Neglecting first measurements to charge capacitor
-        if (cycles >= cycleThreshold) {
+        if (myChronos.cycles > myDurations.cycles) {
             soilMoisture += linRegSensor(mapSensor(pinInputSoil, 3),
-                                        slopeSoilMoisture,
-                                        interceptSoilMoisture);
+                                        myCalibs.slopeSoilMoisture,
+                                        myCalibs.interceptSoilMoisture);
         }
     // Measurement done. Compute mean
     } else {
-        soilMoistureMean = soilMoisture / (cycles - cycleThreshold);
+        soilMoistureMean = soilMoisture / (myChronos.cycles - myDurations.cycles);
         // Serial.print("Measured mean soil moisture: ");
         // Serial.print(soilMoistureMean);
         // Serial.print(" mL/kg over ");
         // Serial.print(cycles - cycleThreshold);
         // Serial.print(" cycles\n");
         // Toggle watering on if it is not yet on
-        if ((soilMoistureMean >= thresholdSoilMoisture) && (watering == false)) {
-            watering = true;
-            previousTimeWatering = millis();
+        if ((soilMoistureMean >= myCalibs.thresholdSoilMoisture) && (myToggles.watering == false)) {
+            myToggles.watering = true;
+            myChronos.watering = millis();
             // if (wateredThisCycle == false) {
             //     Serial.print("WATERING ON\n");
             // } else {
@@ -149,16 +189,20 @@ void loop() {
     }
 
     // Trigger a watering event of fixed duration
-    if ((measuringSoil == false) && (watering == true) && (wateredThisCycle == false)) {
+    if ((myToggles.soilMeasurement == false) && (myToggles.watering == true) && (myToggles.wateredThisCycle == false)) {
         // Serial.print("Watering calls toggleForTime ");
-        watering = toggleForTime(pinOutputWatering, previousTimeWatering, durationWatering, 0);
+        myToggles.watering = toggleForTime(pinOutputWatering, myChronos.watering, myDurations.watering, 0);
         // Reset the trigger if the watering event is over
-        if (watering == false) {
-            wateredThisCycle = true;
+        if (myToggles.watering == false) {
+            myToggles.wateredThisCycle = true;
         }
     }
 
     // Temperature measurement
+    float airTemp = AHT20.getTemperature();
+    float airHumidity = AHT20.getHumidity();
+    uint16_t tVOC = ENS160.getTVOC();
+    uint16_t eCO2 = ENS160.getECO2();
     // Toggle heater
 
     // Carbon dioxide measurement
@@ -170,12 +214,21 @@ void loop() {
 
     // If temperature is higher, compute delta and decide heater time based on that.
     // Similar for pCO2.
-    unsigned long lampTime = getLampTime(pinInputLight);
     // Display current data to LCD after the measurement is done.
-    if ( (millis() - previousTimeLcd >= intervalLcd)) {
-        writeLcdMessage(soilMoistureMean, 22.459, 89.685, 658.874, lampTime);
-        previousTimeLcd = millis();
+    if ( (millis() - myChronos.lcdSensors >= myDurations.lcdSensors)) {
+        writeLcdSensors(soilMoistureMean, 7.1, 
+                        airTemp, airHumidity,
+                        eCO2, tVOC);
+        myChronos.lcdSensors = millis();
         }
+
+    if ( (millis() - myChronos.lcdLamp >= myDurations.lcdLamp)) {
+        unsigned long lampTime = getLampTime(pinInputLight);
+        writeLcdLamp(lampTime);
+        myChronos.lcdLamp = millis();
+    }
+
+    
     // Create upload cycle loop
     // Simply replace by checking if data arrays are full? Upload when e.g. n=60 measurements have been taken +- 1 hour.
     // In Python webserver: get last timepoint of last update. Compute timedelta. Subdivide in n equal parts. Associate each measurement with its own timestamp.
@@ -186,49 +239,91 @@ void loop() {
 
 }
 
+void writeLcdStructure() {
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("GND    L/kg    pH");
+    lcd.setCursor(0,1);
+    lcd.print("AIR     \%       C");
+    lcd.setCursor(0,2);
+    lcd.print("PPM      CO2     VOC");
+    lcd.setCursor(0,3);
+    lcd.print("LMP     :       :");
+}
 
-void writeLcdMessage(float soilMoistureMean, float airTemp, float airMoisture, float ppmCo2, unsigned long lampTime) {
+void writeLcdSensors(float soilMoistureMean, float soilPh,
+                     float airTemp, float airMoisture, 
+                     uint16_t ppmCo2, uint16_t tVOC) {
     // Print the following message to the LCD:
     // GND 1.3Lkg 7.1pH 102     soilMoisture    soilPh      nextSoilMeas
     // AIR 99.8%  27.3C 102     airMoisture     airTemp     nextAirMeas
     // PPM 1023CO2  1011VOC     ppmCo2          ppmVoc
     // LMP   01h30  >08h30<     lmpTimeOn       lmpTimeOff
 
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("HS ");
-    lcd.print(soilMoistureMean, 1);
-    lcd.print("L/kg   T ");
-    lcd.print(airTemp, 1);
-    lcd.setCursor(0, 1);
-    lcd.print("CO2 ");
-    if (ppmCo2 <= 1000) {
-        lcd.print(" ");
+    // SOIL PARAMETERS
+    lcd.setCursor(4, 0);
+    if (myToggles.soilMeasurement == false) {
+        lcd.print(soilMoistureMean, 1);
+    } else {
+        lcd.print("new");
     }
-    lcd.print(ppmCo2, 0);
-    lcd.print("ppm  HA ");
-    lcd.print(airMoisture, 0);
-    lcd.print("%");
+    lcd.setCursor(12, 0);
+    lcd.print(soilPh, 1);
+    lcd.setCursor(18, 0);
+    lcd.print((myDurations.soilMeasurement - (millis() - myChronos.soilMeasurement))/1000);
 
-    int quarters = lampTime / 15 / 60 / 1000;
-    int displayHours = quarters / 4;
-    int displayMins = 15 * (quarters % 4);
-    Serial.print(displayHours);
-    Serial.print(":");
-    Serial.println(displayMins);
-    lcd.setCursor(0, 3);
-    lcd.print("LMP  ");
-    if (displayHours < 10) {
-        lcd.print("0");
+    // AIR PARAMETERS
+    lcd.setCursor(4, 1);
+    lcd.print(airMoisture, 1);
+    lcd.setCursor(11, 1);
+    lcd.print(airTemp, 2);
+
+    // GAS PARAMETERS
+    lcd.setCursor(4, 2);
+    if (ppmCo2 < 10000) {
+        lcd.print(" ");
+        if (ppmCo2 < 1000) {
+            lcd.print(" ");
+        }
     }
-    lcd.print(displayHours);
-    lcd.print(":");
-    if (displayMins < 10) {
-        lcd.print("0");
+    lcd.print(ppmCo2);
+
+    lcd.setCursor(13, 2);
+    if (tVOC < 1000) {
+        lcd.print(" ");
+        if (tVOC < 100) {
+            lcd.print(" ");
+        }
     }
-    lcd.print(displayMins);
+    lcd.print(tVOC);
 }
 
+void writeLcdLamp(unsigned long lampTime) {
+    // LAMP PARAMETERS
+    int quarters = lampTime / 15 / 60 / 1000;
+    int remainder = 96 - quarters;
+    lcd.setCursor(6, 3);
+    lcd.print(formatTime(quarters));
+    lcd.print("   ");
+    lcd.print(formatTime(remainder));
+}
+
+
+String formatTime(int quarters) {
+    String timeString = "";
+    int displayHours = quarters / 4;
+    int displayMins = 15 * (quarters % 4);
+    if (displayHours < 10) {
+        timeString += 0;
+    }
+    timeString += displayHours;
+    timeString += ":";
+    if (displayMins < 10) {
+        timeString += 0;
+    }
+    timeString += displayMins;
+    return timeString;
+} 
 
 unsigned long getLampTime(int pinPotentiometer) {
     // Map the potentiometer voltage to an integer number of quarters. Return as millis.

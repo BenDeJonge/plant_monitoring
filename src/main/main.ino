@@ -105,19 +105,19 @@ void setup() {
     
     // Chronos
     myChronos.soilMeasurement = 0;
+    myChronos.cycles = 0;
     myChronos.watering = 0;
     myChronos.lcdSensors = 0;
     myChronos.lamp = 0;
     myChronos.lcdLamp = 0;
-    myChronos.cycles = 0;
 
     // Durations
     myDurations.soilMeasurement = 60000;
     myDurations.soilMeasurementLength = 10000;
+    myDurations.cycles = 25;
     myDurations.watering = 15000;
     myDurations.lcdSensors = 3000;
     myDurations.lcdLamp = 300;
-    myDurations.cycles = 25;
 
     // Toggles
     myToggles.firstRun = true;
@@ -270,7 +270,11 @@ void writeLcdSensors(float soilMoistureMean, float soilPh,
     lcd.setCursor(12, 0);
     lcd.print(soilPh, 1);
     lcd.setCursor(18, 0);
-    lcd.print((myDurations.soilMeasurement - (millis() - myChronos.soilMeasurement))/1000);
+    unsigned long remainder = ( myDurations.soilMeasurement - (millis() - myChronos.soilMeasurement) )/1000;
+    if (remainder < 10) {
+        lcd.print(" ");
+    }
+    lcd.print(remainder);
 
     // AIR PARAMETERS
     lcd.setCursor(4, 1);

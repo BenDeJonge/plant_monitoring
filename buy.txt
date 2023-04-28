@@ -5,6 +5,7 @@ GENERAL
 - 5m 4-pin LED wire WS2812B ALTERNATIVELY 280m 30 AWG wire colorful
 - proto pcb
 - Lithium battery CR1225
+- 100 uF decoupling cap
 
 SENSORS
 - pH meter
